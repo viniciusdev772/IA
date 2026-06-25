@@ -1,0 +1,52 @@
+*VdevLabs 1*
+Modelo de linguagem PT-BR construído do zero
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*Objetivo*
+
+LLM nativo em português brasileiro, construído do zero — sem fine-tune de modelo gringo, sem framework pronto. Arquitetura própria, tokenizer próprio, dados próprios. 11.7M parâmetros treinados com textos 100% PT-BR.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+*Tecnologias*
+
+• Python 3.12+ / PyTorch
+• Tokenizer BPE byte-level (backend Rust, HuggingFace tokenizers)
+• Vocab: 8.000 tokens
+
+*Arquitetura*
+
+• Transformer decoder-only
+• 12 camadas, 11.7M parâmetros
+• Atenção alternada: local (sliding window) + global
+• RoPE com frequências duais
+• QK-Norm, Logit soft-capping
+• GeGLU activation
+• RMSNorm
+• Weight tying
+
+*Otimizações de Treino*
+
+• Mixed precision (BFloat16)
+• AdamW + OneCycleLR (super-convergence)
+• Gradient accumulation + clipping
+• Checkpoint por epoch
+
+*Dados*
+
+• Web crawler customizado (16 threads)
+• Wikipedia PT (1.1M artigos)
+• Portais educacionais e jornalísticos BR
+• Pipeline de limpeza: filtro de idioma, ruído e duplicatas
+• ~308K frases de treino
+
+*Filosofia*
+
+• Zero frameworks de alto nível
+• Arquitetura single-file
+• Tudo construído do zero
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+_VdevLabs 1 — modelo experimental de geração de texto em português brasileiro_

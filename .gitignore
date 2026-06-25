@@ -1,0 +1,23 @@
+# Datasets grandes
+dataset_crawl.txt
+dataset_wiki_hf.txt
+wiki_hf_part_*.txt
+
+# Modelos (binários grandes)
+gemma_micro/model.pt
+gpt2_mini/model.pt
+*.pt
+*.bin
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs e lixo
+crawl.log
+*.log
+.DS_Store
+
+# Arquivos de texto grandes gerados
+dataset_wiki_pt_full.txt
