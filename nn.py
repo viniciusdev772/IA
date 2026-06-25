@@ -556,16 +556,26 @@ class GemmaMicro(nn.Module):
 
 # ─── Treino ────────────────────────────────────────────────────────────────
 
-def load_texts(*paths: str) -> list[str]:
+def load_texts(*paths: str, max_lines_per_file: int = 0) -> list[str]:
     import glob as _glob
     texts = []
     for p in paths:
         expanded = sorted(_glob.glob(p)) or ([p] if Path(p).exists() else [])
         for ep in expanded:
-            if Path(ep).exists():
-                lines = Path(ep).read_text(encoding="utf-8").strip().splitlines()
-                texts.extend([l.strip() for l in lines if l.strip()])
-                print(f"  {ep}: {len(lines)} linhas")
+            if not Path(ep).exists():
+                continue
+            lines: list[str] = []
+            with open(ep, encoding="utf-8", errors="replace") as fh:
+                for raw in fh:
+                    s = raw.strip()
+                    if s:
+                        lines.append(s)
+                    if max_lines_per_file and len(lines) >= max_lines_per_file:
+                        break
+            texts.extend(lines)
+            total = len(lines)
+            cap = f" (cap={max_lines_per_file})" if max_lines_per_file else ""
+            print(f"  {ep}: {total:,} linhas{cap}")
     return texts
 
 
@@ -577,6 +587,7 @@ def train(
     lr: float      = 6e-4,
     ctx_len: int   = 256,
     accum_steps: int = 2,
+    max_lines_per_file: int = 0,  # 0 = sem limite; use ~500_000 para arquivos gigantes
 ) -> None:
     import os
     import time
@@ -587,7 +598,7 @@ def train(
     print(f"Device: {device} | AMP: {use_amp} | Grad accum: {accum_steps} (effective batch={batch_size * accum_steps})")
 
     print("Carregando textos:")
-    texts = load_texts(*data_paths)
+    texts = load_texts(*data_paths, max_lines_per_file=max_lines_per_file)
     print(f"Total frases: {len(texts)}")
 
     print("Treinando BPE tokenizer:")
