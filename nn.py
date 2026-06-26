@@ -582,12 +582,15 @@ def load_texts(*paths: str, max_lines_per_file: int = 0) -> list[str]:
 def train(
     data_paths: list[str] = ["dataset_portugues_br.txt"],
     save_dir: str  = "gemma_micro",
-    epochs: int    = 15,
-    batch_size: int = 128,
+    epochs: int    = 10,
+    batch_size: int = 32,
     lr: float      = 6e-4,
     ctx_len: int   = 256,
-    accum_steps: int = 2,
+    accum_steps: int = 4,
     max_lines_per_file: int = 0,  # 0 = sem limite; use ~500_000 para arquivos gigantes
+    d_model: int   = 256,
+    n_heads: int   = 8,
+    log_every: int = 20,          # imprime progresso a cada N batches
 ) -> None:
     import os
     import time
@@ -622,7 +625,7 @@ def train(
         torch.cuda.empty_cache()
 
     print("Construindo GemmaMicro:")
-    model = GemmaMicro(vocab_size=tokenizer.vocab_size, ctx_len=ctx_len, d_model=384, n_heads=8).to(device)
+    model = GemmaMicro(vocab_size=tokenizer.vocab_size, ctx_len=ctx_len, d_model=d_model, n_heads=n_heads).to(device)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"  Parâmetros: {n_params:,}", flush=True)
 
@@ -674,8 +677,17 @@ def train(
                 optimizer.zero_grad()
                 scheduler.step()
 
-            if batch_idx % 200 == 0:
-                print(f"  ep{epoch} [{batch_idx}/{n_batches}] loss {loss.item() * accum_steps:.4f}", flush=True)
+            if batch_idx % log_every == 0:
+                step_loss = loss.item() * accum_steps
+                lr_now = scheduler.get_last_lr()[0] if batch_idx > 0 else lr
+                elapsed_so_far = time.time() - t_epoch
+                batches_done = batch_idx + 1
+                eta = (elapsed_so_far / batches_done) * (n_batches - batches_done) if batches_done else 0
+                print(
+                    f"  ep{epoch:02d} [{batch_idx:>5}/{n_batches}] "
+                    f"loss {step_loss:.4f} | lr {lr_now:.2e} | eta {eta:.0f}s",
+                    flush=True,
+                )
 
         elapsed = time.time() - t_epoch
         avg_loss = total_loss / n_batches
@@ -689,9 +701,9 @@ def train(
         torch.save({
             "model": model.state_dict(),
             "ctx_len": ctx_len,
-            "d_model": 256,
-            "n_layers": 12,
-            "n_heads": 8,
+            "d_model": d_model,
+            "n_layers": len(model.blocks),
+            "n_heads": n_heads,
             "epoch": epoch,
             "loss": avg_loss,
         }, f"{save_dir}/model.pt")
