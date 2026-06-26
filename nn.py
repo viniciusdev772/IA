@@ -582,7 +582,7 @@ def load_texts(*paths: str, max_lines_per_file: int = 0) -> list[str]:
 def train(
     data_paths: list[str] = ["dataset_portugues_br.txt"],
     save_dir: str  = "gemma_micro",
-    epochs: int    = 10,
+    epochs: int    = 50,
     batch_size: int = 32,
     lr: float      = 6e-4,
     ctx_len: int   = 256,
@@ -591,6 +591,7 @@ def train(
     d_model: int   = 256,
     n_heads: int   = 8,
     log_every: int = 20,          # imprime progresso a cada N batches
+    vocab_size: int = 2000,       # menor vocab = distribuição mais fácil = PPL mais baixo
 ) -> None:
     import os
     import time
@@ -605,7 +606,7 @@ def train(
     print(f"Total frases: {len(texts)}")
 
     print("Treinando BPE tokenizer:")
-    tokenizer = BPETokenizer(vocab_size=4000).train(texts)
+    tokenizer = BPETokenizer(vocab_size=vocab_size).train(texts)
     print(f"Vocab size: {tokenizer.vocab_size}")
 
     dataset = NextWordDataset(texts, tokenizer, ctx_len=ctx_len)
@@ -679,7 +680,7 @@ def train(
 
             if batch_idx % log_every == 0:
                 step_loss = loss.item() * accum_steps
-                lr_now = scheduler.get_last_lr()[0] if batch_idx > 0 else lr
+                lr_now = optimizer.param_groups[0]['lr']
                 elapsed_so_far = time.time() - t_epoch
                 batches_done = batch_idx + 1
                 eta = (elapsed_so_far / batches_done) * (n_batches - batches_done) if batches_done else 0
